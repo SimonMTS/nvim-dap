@@ -433,6 +433,38 @@ local function jump_to_location(bufnr, line, column, switchbuf, filetype)
     return true
   end
 
+  function switchbuf_fn.usevisible()
+    if vim.bo[cur_buf].buftype == '' or vim.bo[cur_buf].filetype == filetype then
+      api.nvim_win_set_buf(cur_win, bufnr)
+      set_cursor(cur_win, line, column)
+      return true
+    else
+      local visible, same_ft = -1, -1
+      for _, win in ipairs(api.nvim_tabpage_list_wins(0)) do
+        -- Should only overwrite normal buffers
+        if api.nvim_get_option_value('buftype', { win = win }) == "" then
+          visible = win
+          -- Prefer windows with matching filetype
+          if vim.bo[api.nvim_win_get_buf(win)].filetype == filetype then
+            same_ft = win
+            break
+          end
+        end
+      end
+      if same_ft > -1 then
+        api.nvim_win_set_buf(same_ft, bufnr)
+        set_cursor(same_ft, line, column)
+        return true
+      elseif visible > -1 then
+        api.nvim_win_set_buf(visible, bufnr)
+        set_cursor(visible, line, column)
+        return true
+      end
+    end
+    return false
+  end
+
+
   function switchbuf_fn.useopen()
     if api.nvim_win_get_buf(cur_win) == bufnr then
       set_cursor(cur_win, line, column)
